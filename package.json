@@ -22,6 +22,7 @@
     "express": "^4.9.8",
     "geoip-lite": "^1.1.6",
     "node-whois": "^2.1.3",
-    "externalip": "^1.0.2"
+    "externalip": "^1.0.2",
+    "detect-browser": "^1.7.0"
   }
 }

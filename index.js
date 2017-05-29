@@ -18,24 +18,58 @@ node-whois	: Get the whois information (Internet Service Provider)
 var geoip = require('geoip-lite')
 var node_whois = require('node-whois')
 var externalip = require('externalip')
-
+var debrow = require('detect-browser')
+function replace_space(string){
+	return string.trim();
+}
+function clear_space(string, length){
+	if (length < string.length){
+		var new_string = string.substr(length-1, string.length - length -1);
+		var replaced_string = replace_space(new_string);
+		return replaced_string;
+	}
+	return false;
+}
+function validate_whois(data){
+	var new_data = [];
+	var needle = ["inetnum: ", "netname: ", "origin: ", "person: ", "role: ", "route: "];
+	for (var a = 0; a < data.length; a++){
+		var search_found = -1;
+		for (b = 0; b < needle.length; b++){
+			if (data[a].search(needle[b]) >= 0){
+				var jsonVar = {};
+				jsonVar[needle[b]] = clear_space(data[a], needle[b].length);
+				new_data.push(jsonVar);
+			}
+		}
+	}
+	return new_data;
+}
 app.get('/', function(request, response){
 	response.send("Hello world");
 });
 app.get('/track', function(req, res){
-	console.log(req.headers);
-	res.cookie('tracking', 'true', {maxAge: 10000, httpOnly:true});
-	var date = new Date();
-	var benchmarkStart = date.getTime();
-	var ipRequest = '110.137.152.214';
+	var ipRequest = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+	var headers = req.headers;
+	var cookie = req.headers.cookie;
+	var browser = debrow;
 	externalip(function(err, ip){
-		console.log(ip);
+		var geo = geoip.lookup(ip);
 		ipRequest = ip;
 		node_whois.lookup(ipRequest, function(err, data){
-			var callback = data.split('\n');
-			callback.sort();
-			console.log("benchmark: " + (benchmarkStart - date.getTime()).toString());
-			res.send(callback);
+			var whois_callback = data.split('\n');
+			whois_callback.sort();
+			whois_callback = validate_whois(whois_callback);
+			var toReturn = {
+				ip: ipRequest,
+				geoip: geo,
+				cookie: cookie,
+				headers: headers,
+				who_is: whois_callback,
+				browser: browser
+			};
+		
+			res.send(toReturn);
 		});
 	});
 });
