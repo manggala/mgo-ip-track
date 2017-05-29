@@ -39,4 +39,6 @@ app.get('/track', function(req, res){
 		});
 	});
 });
+var port = process.env.port || 3000;
+app.listen(port);
 //app.listen(80);
