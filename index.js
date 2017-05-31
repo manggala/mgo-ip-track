@@ -1,5 +1,13 @@
 var express = require('express');
 var app = express()
+var mysql = require('mysql');
+var connection = mysql.createConnection({
+	host: 'localhost',
+	user: 'root',
+	password: '',
+	database: 'mgo_click'
+});
+connection.connect();
 /*
 Author Codename		: MGO-Manggala
 Author Name		: Muhammad Ghozie Manggala
@@ -13,12 +21,15 @@ geoip-lite 	: Get the current location of client
 node-whois	: Get the whois information (Internet Service Provider)
 		  *this part need more research to extract the string into
 		   data-able information
+request		: create HTTP POST request to the Database Provider
 */
 
 var geoip = require('geoip-lite')
 var node_whois = require('node-whois')
 var externalip = require('externalip')
 var debrow = require('detect-browser')
+var request = require('request')
+
 function replace_space(string){
 	return string.trim();
 }
@@ -45,6 +56,10 @@ function validate_whois(data){
 	}
 	return new_data;
 }
+function store_data(data){
+	data_stringify = JSON.stringify(data);
+	var query = connection.query('Insert into trackers (detail) values (\''+data_stringify+'\')');
+}
 app.get('/', function(request, response){
 	response.send("Hello world");
 });
@@ -53,6 +68,7 @@ app.get('/track', function(req, res){
 	var headers = req.headers;
 	var cookie = req.headers.cookie;
 	var browser = debrow;
+	var parameters = req.query;
 	externalip(function(err, ip){
 		var geo = geoip.lookup(ip);
 		ipRequest = ip;
@@ -66,10 +82,12 @@ app.get('/track', function(req, res){
 				cookie: cookie,
 				headers: headers,
 				who_is: whois_callback,
-				browser: browser
+				browser: browser,
+				parameters: parameters
 			};
-		
-			res.send(toReturn);
+			store_data(toReturn);
+//			res.send({status: 'ok'});
+			res.send("jsonpCallback()");
 		});
 	});
 });
