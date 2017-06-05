@@ -49,7 +49,8 @@ function validate_whois(data){
 		for (b = 0; b < needle.length; b++){
 			if (data[a].search(needle[b]) >= 0){
 				var jsonVar = {};
-				jsonVar[needle[b]] = clear_space(data[a], needle[b].length);
+				jsonVar[needle[b].substr(0, needle[b].length-2)] = clear_space(data[a], needle[b].length);
+
 				new_data.push(jsonVar);
 			}
 		}
@@ -69,25 +70,33 @@ app.get('/track', function(req, res){
 	var cookie = req.headers.cookie;
 	var browser = debrow;
 	var parameters = req.query;
-	externalip(function(err, ip){
-		var geo = geoip.lookup(ip);
-		ipRequest = ip;
-		node_whois.lookup(ipRequest, function(err, data){
-			var whois_callback = data.split('\n');
-			whois_callback.sort();
-			whois_callback = validate_whois(whois_callback);
-			var toReturn = {
-				ip: ipRequest,
-				geoip: geo,
-				cookie: cookie,
-				headers: headers,
-				who_is: whois_callback,
-				browser: browser,
-				parameters: parameters
-			};
-			store_data(toReturn);
-//			res.send({status: 'ok'});
-			res.send("jsonpCallback()");
+	request('http://ipinfo.io/', function(error, response, body){
+		var ipinfo = body;
+		ipinfo = JSON.parse(ipinfo);
+		externalip(function(err, ip){
+			var geo = geoip.lookup(ip);
+			ipRequest = ip;
+			node_whois.lookup(ipRequest, function(err, data){
+				var whois_callback = data.split('\n');
+				whois_callback.sort();
+				whois_callback = validate_whois(whois_callback);
+				var toReturn = {
+					ip: ipRequest,
+					geoip: geo,
+					cookie: cookie,
+					headers: headers,
+					who_is: whois_callback,
+					browser: browser,
+					parameters: parameters,
+					ipinfo: {
+						hostname: ipinfo.hostname,
+						org: ipinfo.org
+					}
+				};
+				store_data(toReturn);
+//				res.send({status: 'ok'});
+				res.send("jsonpCallback()");
+			});
 		});
 	});
 });
